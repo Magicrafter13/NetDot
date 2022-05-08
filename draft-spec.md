@@ -9,56 +9,158 @@ We must establish some baseline facts about the NetDot game, and the server clie
 - Servers listen on a port (default 1234), with a basic TCP socket, and thread off connections.
 
 ## Specification
+Command usage table. S = Server, and C = Client.
+| Command | Talk | Lobby | Spectating | Playing | Notes |
+| ------- | ---- | ----- | ---------- | ------- | ----- |
+| [request-info](#request-info) | :heavy_check_mark: | :x: | :x: | :x: | When a user is officially joined into the server, this command should never be sent. |
+| [info-version](#info-version) | :heavy_check_mark: | :x: | :x: | :x: | Protocol version number. |
+| [info-features](#info-features) | :heavy_check_mark: | :x: | :x: | :x: | Supported features. |
+| [feature-enable](#feature-enable) <br/> [feature-disable](#feature-disable) | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Server is enabling/disabling features. |
+| [vote-start](#vote-start) <br/> [vote-end](#vote-end) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Server is initiating/ending a vote. |
+| [vote-request](#vote-request) <br/> [vote-enable](#vote-disable) <br/> [vote-disable](#vote-disable) | :x: | S :x: <br/> C: :heavy_check_mark: | S :x: <br/> C: :heavy_check_mark: | S :x: <br/> C: :heavy_check_mark: | Client wants to initiate a vote on some thing/feature. |
+
+When a client first connects to a server, they are in the info state, and the server should send `request-info` to learn about the client. Servers are also required to respond to a client sending `request-info`, but are allowed to wait until the client has sent info about itself first (for compatibility). What server/client should do upon receiving this command is detailed alongside the [request-info](#request-info) command details. The info state is simply for communicating information between a server and client, allowing both to make decisions on how to proceed.
+
+- - -
+
 Honestly, I still like the idea of categorizing commands (the `a-b` format). Though I may have to consider replacing the hyphen with a space for simplicity (and we could allow for `a` commands that don't have any `b`s). I do realize that some commands may make it hard to program things for the same reason I want to make an API. Because of this commands will have to be introduced to designate the start and end of a list or sequence of commands. That way a client can store the data as it comes in, and only when signaled, commit that new data (UI update).
-
-First thing's first, we have to get connected. I believe the queue/lobby/spectator/player system is still a good idea. The handshake will continue to be `info-version`, because the more I think about it, the more I enjoy the idea of making a 3-version compatible server (not making it a requirement for the specification of course). The standard shall be that the server sends this information first, but this will not be a requirement, so that older clients can be convinced to stay connected if compatibility is desired.
-
-When first connected, the "queue" as it was once called, will simply be the default state for any connected client. It will allow simple communication with the server to gain any info the client wishes to know. This will be known as the talking state (subject to change). The primary use of this would likely be a server browser, as with a direct connection one would already be trying to join the game.
-
-When the client requests info about the server, more info should be sent than just the version, which will hopefully become more clear as I write more. But for now, it needs to inform the client of whether or not voting is enabled on the server. (Anything like this in the future, if I forget, someone please tell me. Optional server features should be communicated when possible.)
 
 If a client decides (or has already decided) they wish to join this server, the server must do one of three things. The server may deny this request for any reason, and also close the connection if desired. If the server is full (or doesn't want someone to join the game but is willing to let them spectate), it must assign the user to spectator mode. Or, the server may assign the user a unique player ID, allowing them into the game - the game is not required to be stopped (though how one handles that would be up to them).
 
 Players should be allowed to go into spectator mode while the game is running. This will be treated similarly to a network disconnect in 2.0, but without requiring the user to actually disconnect. They may simply decide to not continue playing this particular game.
 
-When the server is in the lobby state, players may freely switch in/out of spectator mode (so long as the player limit, if set, isn't exceeded). The server may shuffle the player order while in the lobby, if desired, to allow for less repetitive gameplay. The server will remain in the lobby until it decides to begin a game, unless [voting](#voting) is enabled.
+When the server is in the lobby state, players may freely switch in/out of spectator mode (so long as the player limit, if set, isn't exceeded). The server may shuffle the player order while in the lobby, if desired, to allow for less repetitive gameplay. The server will remain in the lobby until it decides to begin a game, unless [voting](#vote) is enabled.
 
 When a game is running, in contrast to previous protocols, the server will send out authoritative commands (like the original spectator commands), and clients will update their game, without processing the move for validation. This means server will also send out box updates. While this puts a tiny bit more effort on the server's end, it will help avoid bad situations in the future, and also could allow for some creative uses of a server, perhaps to make art.
 
-### States
-Table showing what states a command group is acceptible in. This is not specifically referring to servers or clients, and is rather generalized.
-| Group | Talk/Queue | Lobby | Spectating | Playing | Notes |
-| ----- | ---------- | ----- | ---------- | ------- | ----- |
-| info  | Required   | No    | No         | No      |       |
-| feature | Required | Yes   | Yes        | Yes     | For now this whall work in all modes. I like the idea of a server being able to disable/enable features when it feels like it. Perhaps the people are getting a little too rowdy so the server operator disables voting? |
-| vote  | No         | Yes   | Yes        | Yes     | See [voting](#voting). |
-| network | Yes*     | Yes   | Yes        | Yes     | *Should only be used to assign the user an ID |
-| request | Yes      | Yes   | Yes        | Yes     | Both for requestion information, and for things to happen? |
+- - -
 
-### Voting
+### Requests
+Details on the request commands, and how they should be treated.
+
+#### request-info
+When this is received (by a server or client), you need to send your protocol [version](#info-version) number first. Then the [features](#info-features) you support should be sent. And for servers, before allowing a client to join the network, the server should communicate which features are enabled/disabled, see [Feature](#feature) for more details.
+
+- - -
+
+### Info
+Details on info commands, and how to send them.
+
+#### info-version
+This command is used to tell the other party what version of the protocol you support.
+
+`info-version <major: Int> <minor: Int>`
+
+#### info-features
+This command is used to tell the other party what features are supported (not which ones are enabled/disabled, but all that are supported).
+
+- - -
+
+### Feature
+During the info handshake, a server should tell the client any features that are enabled or disabled - this is only necessary for non-default values. So if a feature is enabled by default, a server does not need to list is as enabled (though it may). These can change while a client is connected, but should be made known upon joining the game.
+
+These are features that servers should likely support, but at minimum be prepared to handle commands that involve them even if they don't implement the feature. I.e. a server may choose to not support the randomized starting player feature, but must still be able to communicate that to all clients as it is considered an official feature.
+
+Offical features:
+| Feature        | Default  |
+| -------------- | -------- |
+| `random-start` | Disabled |
+| `vote`         | Disabled |
+| `chat`         | Enabled  |
+
+`random-start`: When play begins, the server will randomly decide who gets to play first, instead of defaulting to player 0 (likely the server).
+
+`vote`: Whether or not the server supports/allows voting.
+
+`chat`: Although chat communication can be rather important, some servers may wish to have silent games. I would recommend that if you don't support chat, that you do support voting, so people can at least communicate their intention to restart games.
+
+A server may implement custom features as long as their name/string does not conflict with an existing feature. Because of this I suppose clients should also communicate what features they support so a server may decide whether or not to allow them in. Because, not supporting a feature doesn't necessitate kicking a player, unless that feature is crucial to the game.
+
+#### feature-enable
+Tells a client to enable features.
+
+`feature-enable <feat1: String> <feat2: String> ...`
+
+#### feature-disable
+Tells a client to disable features.
+
+`feature-disable <feat1: String> <feat2: String> ...`
+
+- - -
+
+### Vote
 A new voting system shall be added. A server may choose whether or not to allow voting, however this should be communicated to the client when they first connect.
 
-For ease of use, only one vote shall run at any given time. It will be initiated by `vote-start`, and ended with `vote-end`. When starting a vote, the command should be followed by some word that indicates what is being voted on. It may be any officially documented voting category, or a custom one, as clients are not required to respond to votes, so unsupported/unknown votes can just be ignored by a client. For example, if someone wants to restart a game, they would send `vote-request restart` to the server, and the server would send out `vote-start restart`. The responses you must support will be `vote-yes` and `vote-no`. But custom responses may be allowed (however, once again, a client need not support them).
+For ease of use, only one vote shall run at any given time. It will be initiated by [vote-start](#vote-start), and ended with [vote-end](#vote-end).
 
-There should also be `vote-enable <feature: String>` and `vote-disable <feature: String>` to vote to enable/disable a server feature. Obviously these are `yes`/`no` responses.
+Clients may ask for voting to begin with [vote-request](#vote-request).
 
+#### vote-start
+The server is starting a new vote. This may be sent to start a new vote without sending `vote-end` (implicit). The command should be followed by some word that indicates what is being voted on. If may be any officially documented voting category, or a custom one, as clients are not required to respond to votes, so unsupported/unknown votes can just be ignored by a client.
+
+`vote-start <what: String>`  
+or  
+`vote-start (enable|disable) <feature: String>`
+
+Example: `vote-start restart` would begin a vote to (re)start the game. The responses you must support will be `vote-yes` and `vote-no`.
+
+Custom responses may be allowed (for custom votes), however once again, a client need not support them.
+
+If `vote-start` is followed by `enable` or `disable`, the next argument will be a [feature](#feature) string. This indicates a vote to enable or disable a feature, valid responses are `vote-yes` or `vote-no`. If the feature is not official, a client may choose how to handle it. I'd recommend still allowing the user to vote, but the vote/description text should say something like `Server is calling an unfamiliar vote. Name is "what".` Where what is the thing being voted on. Adapt this message for feature votes too.
+
+Official votes:
 - `restart`: Used for new games from the lobby and restarting a running game (context sensitive). `yes`/`no`
 - `lobby`: Stop a game and return to the lobby. `yes`/`no`
 - `shuffle`: Shuffle player order (should we finish one player cycle first?). `yes`/`no`
 
-### Official/Custom Features
-These are features that servers should likely support, but at minimum be prepared to handle commands that involve them even if they don't implement the feature. I.e. a server may choose to not support the randomized starting player feature, but must still be able to communicate that to all clients as it is considered an official feature.
+#### vote-end
+The current vote has ended (so if a user has not responded yet, the voting prompt should be hidden now).
 
-- `random-start`: When play begins, the server will randomly decide who gets to play first, instead of defaulting to player 0 (likely the server).
-- `vote`: Whether or not the server supports/allows voting.
-- `chat`: Although chat communication can be rather important, some servers may wish to have silent games. I would recommend that if you don't support chat, that you do support voting, so people can at least communicate their intention to restart games.
+`vote-end`
 
-A server may implement custom features as long as their name/string does not conflict with an existing feature. Because of this I suppose clients should also communicate what features they support so a server may decide whether or not to allow them in. Because, not supporting a feature doesn't necessitate kicking a player, unless that feature is crucial to the game.
+#### vote-request
+A client may send this out to ask the server to initiate a vote
+
+`vote-request <what: String>`
+
+Example: `vote-request restart` would ask the server to begin a vote to (re)start the game.
+
+#### vote-enable
+A variant of `vote-request` that asks the server to start a vote to enable a feature.
+
+`vote-enable <feature: String>`
+
+#### vote-disable
+A variant of `vote-request` that asks the server to start a vote to disable a feature.
+
+`vote-disable <feature: String>`
+
+- - -
+
+### States
+**Talk**  
+Initial client state. Used for communication of version compatibility, available features, and current setup.
+
+**Lobby**  
+State used when a game is not in progress. This is where users will be if they desire to play in the next game.
+
+**Spectating**  
+This is a special state, that applies to both Lobby and Playing. While the lobby state is active, users may decide to go into spectator mode before the game starts (or they could have joined directly into this mode without being assigned to the game if they wish).
+
+**Playing**  
+Primary game state, both for a game in progress, and a completed game.
+
+- - -
+
+Table showing what states a command group is acceptible in. This is not specifically referring to servers or clients, and is rather generalized.
+| Group | Talk/Queue | Lobby | Spectating | Playing | Notes |
+| ----- | ---------- | ----- | ---------- | ------- | ----- |
+| network | Yes*     | Yes   | Yes        | Yes     | *Should only be used to assign the user an ID |
 
 ### Command Groups
 - `info`: All things information sharing. Version numbers, server capacity, motd, etc. Any type of query you might wish to make on a server, even if you aren't trying to connect to it to play.
 - `feature`: Specialized information sharing - that at present is allowed during every state - which informs clients of which of the optional features mentioned in this specification, are enabled/disabled.
-- `vote`: Used for initiating, and participating in, server votes. See [voting](#voting).
+- `vote`: Used for initiating, and participating in, server votes. See [voting](#vote).
 - `network`: Updates regarding the state of the network.
 - `request`: For clients, this is to request information, and for the server to do things. For servers this is just for requesting information
 
