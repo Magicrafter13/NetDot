@@ -6,6 +6,34 @@ We must establish some baseline facts about the NetDot game, and the server clie
 - This is a multiplayer (networked) game of "dots n' boxes".
 - It follows a strict server/client model. The server is authoritative, and clients are expected to follow its command.
 - The clients may keep track of as much or as little information as they want (so long as it does not interfere with the smooth operation of the game).
+- Servers listen on a port (default 1234), with a basic TCP socket, and thread off connections.
+
+## Specification
+Honestly, I still like the idea of categorizing commands (the `a-b` format). Though I may have to consider replacing the hyphen with a space for simplicity (and we could allow for `a` commands that don't have any `b`s). I do realize that some commands may make it hard to program things for the same reason I want to make an API. Because of this commands will have to be introduced to designate the start and end of a list or sequence of commands. That way a client can store the data as it comes in, and only when signaled, commit that new data (UI update).
+
+First thing's first, we have to get connected. I believe the queue/lobby/spectator/player system is still a good idea. The handshake will continue to be `info-version`, because the more I think about it, the more I enjoy the idea of making a 3-version compatible server (not making it a requirement for the specification of course). The standard shall be that the server sends this information first, but this will not be a requirement, so that older clients can be convinced to stay connected if compatibility is desired.
+
+When first connected, the "queue" as it was once called, will simply be the default state for any connected client. It will allow simple communication with the server to gain any info the client wishes to know. This will be known as the talking state (subject to change). The primary use of this would likely be a server browser, as with a direct connection one would already be trying to join the game.
+
+When the client requests info about the server, more info should be sent than just the version, which will hopefully become more clear as I write more. But for now, it needs to inform the client of whether or not voting is enabled on the server. (Anything like this in the future, if I forget, someone please tell me. Optional server features should be communicated when possible.)
+
+If a client decides (or has already decided) they wish to join this server, the server must do one of three things. The server may deny this request for any reason, and also close the connection if desired. If the server is full (or doesn't want someone to join the game but is willing to let them spectate), it must assign the user to spectator mode. Or, the server may assign the user a unique player ID, allowing them into the game - the game is not required to be stopped (though how one handles that would be up to them).
+
+Players should be allowed to go into spectator mode while the game is running. This will be treated similarly to a network disconnect in 2.0, but without requiring the user to actually disconnect. They may simply decide to not continue playing this particular game.
+
+### States
+Table showing what states a command group is acceptible in.
+| Group | Talk/Queue | Lobby | Spectating | Playing | Notes |
+| ----- | ---------- | ----- | ---------- | ------- | ----- |
+| info  | Required   | No    | No         | No      |       |
+| feature | Required | Yes   | Yes        | Yes     | For now this whall work in all modes. I like the idea of a server being able to disable/enable features when it feels like it. Perhaps the people are getting a little too rowdy so the server operator disables voting? |
+
+### Voting
+A new voting system shall be added. A server may choose whether or not to allow voting, however this should be communicated to the client when they first connect.
+
+### Command Groups
+- `info`: All things information sharing. Version numbers, server capacity, motd, etc. Any type of query you might wish to make on a server, even if you aren't trying to connect to it to play.
+- `feature`: Specialized information sharing - that at present is allowed during every state - which informs clients of which of the optional features mentioned in this specification, are enabled/disabled.
 
 ## Server Requirements
 
