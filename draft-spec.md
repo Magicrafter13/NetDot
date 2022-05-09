@@ -1,8 +1,6 @@
 # NetDot Network Protocol Revision 3 (Draft)
 This is going to be a working document detailing a proposed implementation for a new net-code specification. I'm open to feedback, whether it be what you consider a better way of doing something, or simply proposing a feature. The [history](#history) section of the document will detail why I am doing this, as well as attempt to document [protocol 2](#20-net-code), and the [original protocol](#1x-net-code).
 
-# HEY ADD ANNOUNCEMENTS TO THE SPEC
-
 ## Stipulations
 We must establish some baseline facts about the NetDot game, and the server client model.
 - This is a multiplayer (networked) game of "dots n' boxes".
