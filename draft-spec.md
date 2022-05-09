@@ -11,18 +11,32 @@ We must establish some baseline facts about the NetDot game, and the server clie
 - Servers listen on a port (default 1234), with a basic TCP socket, and thread off connections.
 
 # Specification
-Command usage table. S = Server, and C = Client.
+Terminology: While I can't guarantee I'll be completely consistent, generally speaking, a client is just someone connected to the server (the socket). A user is someone who is joined into "the network". The network refers to anyone past the Talk state/mode, someone who is either in the lobby, or playing/spectating.
+
+Command usage table. S = Server, and C = Client, specifying who can *send* the command.
 | Command | Talk | Lobby | Playing | Notes |
 | ------- | ---- | ----- | ------- | ----- |
 | [request-info](#request-info) | :heavy_check_mark: | :x: | :x: | When a user is officially joined into the server, this command should never be sent. |
+| [request-motd](#request-motd) | S: :x: <br/> C: :heavy_check_mark: | :x: | :x: | Client wants the server's MotD. |
+| [request-join](#request-join) | S: :x: <br/> C: :heavy_check_mark: | :x: | :x: | A client wishes to join the network. |
+| [request-deny](#request-deny) | S: :heavy_check_mark: <br/> C: :x: | :x: | :x: | The server has denied your request to join the network. |
+| | | | | |
 | [info-version](#info-version) | :heavy_check_mark: | :x: | :x: | Protocol version number. |
+| [info-motd](#info-motd) | S: :heavy_check_mark: <br/> C: :x: | :x: | :x: | Send the server's MotD. |
 | [info-features](#info-features) | :heavy_check_mark: | :x: | :x: | Supported features. |
+| | | | | |
 | [feature-enable](#feature-enable) <br/> [feature-disable](#feature-disable) | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Server is enabling/disabling features. |
+| | | | | |
 | [vote-start](#vote-start) <br/> [vote-end](#vote-end) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Server is initiating/ending a vote. |
-| [vote-request](#vote-request) <br/> [vote-enable](#vote-disable) <br/> [vote-disable](#vote-disable) | :x: | S :x: <br/> C: :heavy_check_mark: | S :x: <br/> C: :heavy_check_mark: | Client wants to initiate a vote on some thing/feature. |
+| [vote-request](#vote-request) | :x: | S :x: <br/> C: :heavy_check_mark: | S :x: <br/> C: :heavy_check_mark: | Client wants to initiate a vote on some thing/feature. |
+| [vote-enable](#vote-enable) <br/> [vote-disable](#vote-disable) | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | The server is enabling/disabling voting for something. |
+| | | | | |
 | [network-assign](#network-assign) | S: :heavy_check_mark: <br/> C: :x: | :x: | :x: | Assigns a network user ID to a newly joining client. |
 | [network-announce](#network-announce) | :x: | S :heavy_check_mark: <br/> C: :x: | S :heavy_check_mark: <br/> C: :x: | Server announcements. |
 | [network-add](#network-add) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Send (new) user details. |
+| [network-chat](#network-chat) | :x: | :heavy_check_mark: | :heavy_check_mark: | New message on the network. |
+| | | | | |
+| [game-ready](#game-ready) <br/> [game-notready](#game-notready) | :x: | :heavy_check_mark: | :x: | Update status about users who are going to play the next game. |
 
 When a client first connects to a server, they are in the info state, and the server should send `request-info` to learn about the client. Servers are also required to respond to a client sending `request-info`, but are allowed to wait until the client has sent info about itself first (for compatibility). What server/client should do upon receiving this command is detailed alongside the [request-info](#request-info) command details. The info state is simply for communicating information between a server and client, allowing both to make decisions on how to proceed.
 
@@ -31,7 +45,7 @@ After exchanging information, a client may decide to disconnect, or attempt to j
 2. If the server is full (or just doesn't want someone to join the game but is willing to let them spectate), it must assign the user to spectator mode.
 3. Or, the server may assign the user a unique player ID, allowing them into the game - the game is not required to be stopped (though how one handles that scenario would be up to them).
 
-In the lobby, clients must ready up if they wish to play in the next game. When the game starts, any readied client will be set as a player in the game, and anyone not ready will be a spectator. The server will remain in the lobby until it decides to begin a game, unless [voting](#vote) is enabled.
+In the lobby, clients must ready up if they wish to play in the next game. When the game starts, any readied client will be set as a player in the game, and anyone not ready will be a spectator. The server will remain in the lobby until it decides to begin a game, unless [voting](#vote) is enabled. Also see [game-ready](#game-ready) and [game-notready](#game-notready).
 
 Players should be allowed to leave a running game and becom spectators. This will be treated similarly to a network disconnect in 2.0, but without requiring the user to actually disconnect. They may simply decide to not continue playing this particular game.
 
@@ -46,23 +60,47 @@ Honestly, I still like the idea of categorizing commands (the `a-b` format). Tho
 - - -
 
 ## Requests
-Details on the request commands, and how they should be treated.
+Details on the request commands, and how they should be treated. For clients this is used for requesting information as well as joining the game. For servers this is used to request information and deny requests.
 
 ### request-info
-When this is received (by a server or client), you need to send your protocol [version](#info-version) number first. Then the [features](#info-features) you support should be sent. And for servers, before allowing a client to join the network, the server should communicate which features are enabled/disabled, see [Feature](#feature) for more details.
+When this is received (by a server or client), you need to send your protocol [version](#info-version) number first. Then the [features](#info-features) you support should be sent. And for servers, before allowing a client to join the network, the server should communicate which features are supported and with are enabled/disabled, see [Feature](#feature) for more details.
+
+`request-info`
+
+### request-motd
+The client wishes to see the server's motd. Likely only used by master server browsers.
+
+`request-motd`
+
+### request-join
+Upon receiving this command, the server must decide whether or not to allow the client to join the network. If it decides not to, it must send [request-deny](#request-deny).
+
+`request-join`
+
+### request-deny
+The server has rejected your request to join the network. It may optionally provide a reason.
+
+`request-deny [reason: String]`
 
 - - -
 
 ## Info
-Details on info commands, and how to send them.
+Details on info commands, and how to send them. Used for all things information sharing. Version numbers, server capacity, motd, etc. Any type of query regarding a server (or client) even if you aren't trying to connect to it to play.
 
 ### info-version
 This command is used to tell the other party what version of the protocol you support.
 
 `info-version <major: Int> <minor: Int>`
 
+### info-motd
+Informs a connected client of this server's [MotD](https://en.wikipedia.org/wiki/Motd_(Unix)). Most useful for a master server browser to display, unlikely to be used by regular game clients.
+
+`info-motd <motd: String>`
+
 ### info-features
 This command is used to tell the other party what features are supported (not which ones are enabled/disabled, but all that are supported).
+
+`info-features <feat1: String> <feat2: String> ...`
 
 - - -
 
@@ -74,15 +112,18 @@ These are features that servers should likely support, but at minimum be prepare
 Offical features:
 | Feature        | Default  |
 | -------------- | -------- |
-| `random-start` | Disabled |
-| `vote`         | Disabled |
 | `chat`         | Enabled  |
+| `vote`         | Disabled |
+| `random-start` | Disabled |
+| `random-order` | Disabled |
 
-`random-start`: When play begins, the server will randomly decide who gets to play first, instead of defaulting to player 0 (likely the server).
+`chat`: Although chat communication can be rather important, some servers may wish to have silent games. I would recommend that if you don't support chat, that you do support voting, so people can at least communicate their intention to restart games.
 
 `vote`: Whether or not the server supports/allows voting.
 
-`chat`: Although chat communication can be rather important, some servers may wish to have silent games. I would recommend that if you don't support chat, that you do support voting, so people can at least communicate their intention to restart games.
+`random-start`: When play begins, the server will randomly decide who gets to play first, instead of defaulting to player 0 (likely the server).
+
+`random-order`: The player order will be randomized when each game starts, instead of the traditional approach of players going in the order they connected.
 
 A server may implement custom features as long as their name/string does not conflict with an existing feature. Because of this I suppose clients should also communicate what features they support so a server may decide whether or not to allow them in. Because, not supporting a feature doesn't necessitate kicking a player, unless that feature is crucial to the game.
 
@@ -140,14 +181,14 @@ Example: `vote-request restart` would ask the server to begin a vote to (re)star
 The variant with `enable` or `disable` indicates the client wants to start a vote to enable or disable a server feature respectively, with valid responses being `vote-yes` or `vote-no`
 
 ### vote-enable
-Informs a client that voting on a particular thing or feature is enabled.
+Informs a client that voting on a particular thing or feature is enabled. By default everything is enabled to be voted on, so this command need only be sent if something has previously been disabled but is now being re-enabled.
 
 `vote-enable <what: String>`  
 or  
 `vote-enable feature <feature: String>`
 
 ### vote-disable
-Informs a client that voting on a particular thing or feature is disabled.
+Informs a client that voting on a particular thing or feature is disabled. By default everything is enabled to be voted on, therefore this command should be sent when someone joins the network so they can remove disabled votes from their UI.
 
 `vote-disable <what: String>`  
 or  
@@ -156,6 +197,7 @@ or
 - - -
 
 ## Network
+Updates regarding the state of the network.
 
 ### network-assign
 Assigns a unique ID to the client.
@@ -172,26 +214,40 @@ Sends details about a newly connected user to the network (or for all users when
 
 `network-add <id: Int> <name: String>`
 
+### network-chat
+Send a message to the network.
+
+`network-chat <message: String>` (client)  
+`network-chat <id: Int> <message: String>`
+
 - - -
+
+## Game
+These commands will be used for game instruction and status.
+
+### game-ready
+In the lobby, this user is ready for the next game (wants to play). The server may choose to ignore this if it does not want this user to play. The server should update all users when it receives this command (if it accepts it) by also sending `game-ready` so that clients may update their UI to show who is and isn't ready.
+
+`game-ready` (client)  
+`game-ready <id: Int>` (server)
+
+### game-notready
+In the lobby, this user does not wish to play in the next game. The server may not ignore this (force a user to play). The server should update all users when it receives this command by also sending `game-notready` so that clients may update their UI to show who is and isn't ready.
+
+`game-notready` (client)  
+`game-notready <id: Int>` (server)
+
+ - - -
 
 ## States
-**Talk**  
+### Talk
 Initial client state. Used for communication of version compatibility, available features, and current setup.
 
-**Lobby**  
+### Lobby
 State used when a game is not in progress. Users will mark themselves as ready if they wish to play in the next game.
 
-**Playing**  
+### Playing
 Spectators and players will be in this state when a game begins and is running. Obviously game related commands from spectators should be ignored (they shouldn't be sent to begin with).
-
-- - -
-
-## Command Groups
-- `info`: All things information sharing. Version numbers, server capacity, motd, etc. Any type of query you might wish to make on a server, even if you aren't trying to connect to it to play.
-- `feature`: Specialized information sharing - that at present is allowed during every state - which informs clients of which of the optional features mentioned in this specification, are enabled/disabled.
-- `vote`: Used for initiating, and participating in, server votes. See [voting](#vote).
-- `network`: Updates regarding the state of the network.
-- `request`: For clients, this is to request information, and for the server to do things. For servers this is just for requesting information
 
 ## Server Requirements
 
