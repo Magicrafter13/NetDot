@@ -34,7 +34,14 @@ Command usage table. S = Server, and C = Client, specifying who can *send* the c
 | [network-add](#network-add) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Send (new) user details. |
 | [network-chat](#network-chat) | :x: | :heavy_check_mark: | :heavy_check_mark: | New message on the network. |
 | | | | | |
+| [user-name](#user-name) | :x: | :heavy_check_mark: | :heavy_check_mark: | Change a user's name. |
+| [user-color](#user-color) | :x: | :heavy_check_mark: | :heavy_check_mark: | Change a user's color. |
+| | | | | |
 | [game-ready](#game-ready) <br/> [game-notready](#game-notready) | :x: | :heavy_check_mark: | :x: | Update status about users who are going to play the next game. |
+| [game-start](#game-start) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Start a new game. |
+| [game-stop](#game-stop) | :x: | :x: | S: :heavy_check_mark: <br/> C: :x: | Stop the game. |
+| [game-leave](#game-leave) <br/> [game-join](#game-join) | :x: | :x: | :heavy_check_mark: | A client wants to (or is) leaving/joining the game. |
+| [game-line](#game-line) <br/> [game-box](#game-box) | :x: | :x: | :heavy_check_mark: | Set a line/box's owner in the game. |
 
 When a client first connects to a server, they are in the info state, and the server should send `request-info` to learn about the client. Servers are also required to respond to a client sending `request-info`, but are allowed to wait until the client has sent info about itself first (for compatibility). What server/client should do upon receiving this command is detailed alongside the [request-info](#request-info) command details. The info state is simply for communicating information between a server and client, allowing both to make decisions on how to proceed.
 
@@ -71,9 +78,9 @@ The client wishes to see the server's motd. Likely only used by master server br
 `request-motd`
 
 ### request-join
-Upon receiving this command, the server must decide whether or not to allow the client to join the network. If it decides not to, it must send [request-deny](#request-deny).
+Upon receiving this command, the server must decide whether or not to allow the client to join the network. If it decides not to, it must send [request-deny](#request-deny). Optionally you may provide a desired name or a color (or both - but color must come first).
 
-`request-join`
+`request-join [color <color: Int>] [name <name: String>]`
 
 ### request-deny
 The server has rejected your request to join the network. It may optionally provide a reason.
@@ -161,6 +168,7 @@ Official votes:
 - `restart`: Used for new games from the lobby and restarting a running game (context sensitive). `yes`/`no`
 - `lobby`: Stop a game and return to the lobby. `yes`/`no`
 - `shuffle`: Shuffle player order (should we finish one player cycle first?). `yes`/`no`
+- `kick`: Kick a player from the network. (`vote-start kick <id: Int> [reason: String]`)
 
 ### vote-end
 The current vote has ended (so if a user has not responded yet, the voting prompt should be hidden now).
@@ -210,13 +218,30 @@ Used by the server to send out network-wide announcements. May be ignored by cli
 ### network-add
 Sends details about a newly connected user to the network (or for all users when someone joins and needs to know who is already here).
 
-`network-add <id: Int> <name: String>`
+`network-add <id: Int> <color: Int> <name: String>`
 
 ### network-chat
 Send a message to the network.
 
 `network-chat <message: String>` (client)  
 `network-chat <id: Int> <message: String>`
+
+- - -
+
+## User
+Commands for updating user information.
+
+### user-name
+Change a user's name.
+
+`user-name <name: String>` (client)  
+`user-name <id: Int> <name: String>` (server)
+
+### user-color
+Change a user's color.
+
+`user-color <color: Int>` (client)  
+`user-color <id: Int> <color: Int>` (server)
 
 - - -
 
@@ -234,6 +259,38 @@ In the lobby, this user does not wish to play in the next game. The server may n
 
 `game-notready` (client)  
 `game-notready <id: Int>` (server)
+
+### game-start
+Server is starting the game. If a game is already running, reset the current game state (always starts a new game).
+
+`game-start`
+
+### game-stop
+Server is stopping the game and returning to the lobby.
+
+`game-stop`
+
+### game-leave
+Client wishes to leave the game (become spectator). The server must always allow a client to leave the running game.
+
+`game-leave` (client)  
+`game-leave <id: Int>` (server)
+
+### game-join
+Client wishes to join the game (leave spectator). The server may choose to ignore this if it does not wish for a player to join the running game.
+
+`game-join` (client)  
+`game-join <id: Int>` (server)
+
+### game-line
+Set the owner of the given line. This replaces `game-play` for clients. The server (obviously) may ignore this command.
+
+`game-line <id: Int> <x: Int> <y: Int> (hor|ver)`
+
+### game-box
+Set the owner of the given box. Clients may send this too, though in a standard game/server it will serve no purpose to do so.
+
+`game-box <id: Int> <x: Int> <y: Int>`
 
  - - -
 
