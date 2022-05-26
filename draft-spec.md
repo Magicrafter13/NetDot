@@ -33,6 +33,7 @@ Command usage table. S = Server, and C = Client, specifying who can *send* the c
 | [network-announce](#network-announce) | :x: | S :heavy_check_mark: <br/> C: :x: | S :heavy_check_mark: <br/> C: :x: | Server announcements. |
 | [network-add](#network-add) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Send (new) user details. |
 | [network-chat](#network-chat) | :x: | :heavy_check_mark: | :heavy_check_mark: | New message on the network. |
+| [network-ping](#network-ping) <br/> [network-pong](#network-pong) | :x: | :heavy_check_mark: | :heavy_check_mark: | Heartbeat. |
 | | | | | |
 | [user-name](#user-name) | :x: | :heavy_check_mark: | :heavy_check_mark: | Change a user's name. |
 | [user-color](#user-color) | :x: | :heavy_check_mark: | :heavy_check_mark: | Change a user's color. |
@@ -42,6 +43,7 @@ Command usage table. S = Server, and C = Client, specifying who can *send* the c
 | [game-stop](#game-stop) | :x: | :x: | S: :heavy_check_mark: <br/> C: :x: | Stop the game. |
 | [game-leave](#game-leave) <br/> [game-join](#game-join) | :x: | :x: | :heavy_check_mark: | A client wants to (or is) leaving/joining the game. |
 | [game-line](#game-line) <br/> [game-box](#game-box) | :x: | :x: | :heavy_check_mark: | Set a line/box's owner in the game. |
+| [game-current](#game-current) | :x: | :x: | S: :heavy_check_mark: <br/> C: :x: | Current player in game. |
 
 When a client first connects to a server, they are in the info state, and the server should send `request-info` to learn about the client. Servers are also required to respond to a client sending `request-info`, but are allowed to wait until the client has sent info about itself first (for compatibility). What server/client should do upon receiving this command is detailed alongside the [request-info](#request-info) command details. The info state is simply for communicating information between a server and client, allowing both to make decisions on how to proceed.
 
@@ -124,7 +126,7 @@ Offical features:
 
 `chat`: Although chat communication can be rather important, some servers may wish to have silent games. I would recommend that if you don't support chat, that you do support voting, so people can at least communicate their intention to restart games.
 
-`vote`: Whether or not the server supports/allows voting.
+`vote`: Whether or not the server supports/allows voting. You probably don't want to let people vote to disable voting, but you can if you wish...
 
 `random-start`: When play begins, the server will randomly decide who gets to play first, instead of defaulting to player 0 (likely the server).
 
@@ -226,6 +228,16 @@ Send a message to the network.
 `network-chat <message: String>` (client)  
 `network-chat <id: Int> <message: String>`
 
+### network-ping
+A heartbeat is being sent out. You are expected to respond with `network-pong`.
+
+`network-ping`
+
+### network-pong
+Response to a heartbeat.
+
+`network-pong`
+
 - - -
 
 ## User
@@ -249,7 +261,7 @@ Change a user's color.
 These commands will be used for game instruction and status.
 
 ### game-ready
-In the lobby, this user is ready for the next game (wants to play). The server may choose to ignore this if it does not want this user to play. The server should update all users when it receives this command (if it accepts it) by also sending `game-ready` so that clients may update their UI to show who is and isn't ready.
+In the lobby, this user is ready for the next game (wants to play). The server may choose to ignore this if it does not want this user to play. The server should update all users when it receives this command (if it accepts it) by also sending `game-ready` so that clients may update their UI to show who is and isn't ready. Clients should keep track of who is and isn't marked ready by the server when a game begins.
 
 `game-ready` (client)  
 `game-ready <id: Int>` (server)
@@ -291,6 +303,11 @@ Set the owner of the given line. This replaces `game-play` for clients. The serv
 Set the owner of the given box. Clients may send this too, though in a standard game/server it will serve no purpose to do so.
 
 `game-box <id: Int> <x: Int> <y: Int>`
+
+### game-current
+Whose turn it is.
+
+`game-current <id: Int>`
 
  - - -
 
