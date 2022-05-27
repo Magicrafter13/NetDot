@@ -11,27 +11,27 @@ We must establish some baseline facts about the NetDot game, and the server clie
 # Specification
 Terminology: While I can't guarantee I'll be completely consistent, generally speaking, a client is just someone connected to the server (the socket). A user is someone who is joined into "the network". The network refers to anyone past the Talk state/mode, someone who is either in the lobby, or playing/spectating.
 
-Command usage table. S = Server, and C = Client, specifying who can *send* the command.
+Command usage table. :heavy_check_mark: = Both Server and Client, S = Server, C = Client, and :x: = Neither, specifying who can *send* the command.
 | Command | Talk | Lobby | Playing | Notes |
 | ------- | ---- | ----- | ------- | ----- |
 | [request-info](#request-info) | :heavy_check_mark: | :x: | :x: | When a user is officially joined into the server, this command should never be sent. |
-| [request-motd](#request-motd) | S: :x: <br/> C: :heavy_check_mark: | :x: | :x: | Client wants the server's MotD. |
-| [request-join](#request-join) | S: :x: <br/> C: :heavy_check_mark: | :x: | :x: | A client wishes to join the network. |
-| [request-deny](#request-deny) | S: :heavy_check_mark: <br/> C: :x: | :x: | :x: | The server has denied your request to join the network. |
+| [request-motd](#request-motd) | C | :x: | :x: | Client wants the server's MotD. |
+| [request-join](#request-join) | C | :x: | :x: | A client wishes to join the network. |
+| [request-deny](#request-deny) | S | :x: | :x: | The server has denied your request to join the network. |
 | | | | | |
 | [info-version](#info-version) | :heavy_check_mark: | :x: | :x: | Protocol version number. |
-| [info-motd](#info-motd) | S: :heavy_check_mark: <br/> C: :x: | :x: | :x: | Send the server's MotD. |
+| [info-motd](#info-motd) | S | :x: | :x: | Send the server's MotD. |
 | [info-features](#info-features) | :heavy_check_mark: | :x: | :x: | Supported features. |
 | | | | | |
-| [feature-enable](#feature-enable) <br/> [feature-disable](#feature-disable) | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Server is enabling/disabling features. |
+| [feature-enable](#feature-enable) <br/> [feature-disable](#feature-disable) | S | S | S | Server is enabling/disabling features. |
 | | | | | |
-| [vote-start](#vote-start) <br/> [vote-end](#vote-end) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Server is initiating/ending a vote. |
-| [vote-request](#vote-request) | :x: | S :x: <br/> C: :heavy_check_mark: | S :x: <br/> C: :heavy_check_mark: | Client wants to initiate a vote on some thing/feature. |
-| [vote-enable](#vote-enable) <br/> [vote-disable](#vote-disable) | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | The server is enabling/disabling voting for something. |
+| [vote-start](#vote-start) <br/> [vote-end](#vote-end) | :x: | S | S | Server is initiating/ending a vote. |
+| [vote-request](#vote-request) | :x: | C | C | Client wants to initiate a vote on some thing/feature. |
+| [vote-enable](#vote-enable) <br/> [vote-disable](#vote-disable) | S | S | S | The server is enabling/disabling voting for something. |
 | | | | | |
-| [network-assign](#network-assign) | S: :heavy_check_mark: <br/> C: :x: | :x: | :x: | Assigns a network user ID to a newly joining client. |
-| [network-announce](#network-announce) | :x: | S :heavy_check_mark: <br/> C: :x: | S :heavy_check_mark: <br/> C: :x: | Server announcements. |
-| [network-add](#network-add) <br/> [network-remove](#network-remove) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Send (new) user details. Or removes one from the network. |
+| [network-assign](#network-assign) | S | :x: | :x: | Assigns a network user ID to a newly joining client. |
+| [network-announce](#network-announce) | :x: | S | S | Server announcements. |
+| [network-add](#network-add) <br/> [network-remove](#network-remove) | :x: | S | S | Send (new) user details. Or removes one from the network. |
 | [network-chat](#network-chat) | :x: | :heavy_check_mark: | :heavy_check_mark: | New message on the network. |
 | [network-ping](#network-ping) <br/> [network-pong](#network-pong) | :x: | :heavy_check_mark: | :heavy_check_mark: | Heartbeat. |
 | | | | | |
@@ -39,12 +39,12 @@ Command usage table. S = Server, and C = Client, specifying who can *send* the c
 | [user-color](#user-color) | :x: | :heavy_check_mark: | :heavy_check_mark: | Change a user's color. |
 | | | | | |
 | [game-ready](#game-ready) <br/> [game-notready](#game-notready) | :x: | :heavy_check_mark: | :x: | Update status about users who are going to play the next game. |
-| [game-start](#game-start) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Start a new game. |
-| [game-stop](#game-stop) | :x: | :x: | S: :heavy_check_mark: <br/> C: :x: | Stop the game. |
+| [game-start](#game-start) | :x: | S | S | Start a new game. |
+| [game-stop](#game-stop) | :x: | :x: | S | Stop the game. |
 | [game-leave](#game-leave) <br/> [game-join](#game-join) | :x: | :x: | :heavy_check_mark: | A client wants to (or is) leaving/joining the game. |
-| [game-size](#game-size) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Changes the size of the game grid. |
+| [game-size](#game-size) | :x: | S | S | Changes the size of the game grid. |
 | [game-line](#game-line) <br/> [game-box](#game-box) | :x: | :x: | :heavy_check_mark: | Set a line/box's owner in the game. |
-| [game-current](#game-current) | :x: | :x: | S: :heavy_check_mark: <br/> C: :x: | Current player in game. |
+| [game-current](#game-current) | :x: | :x: | S | Current player in game. |
 
 When a client first connects to a server, they are in the info state, and the server should send `request-info` to learn about the client. Servers are also required to respond to a client sending `request-info`, but are allowed to wait until the client has sent info about itself first (for compatibility). What server/client should do upon receiving this command is detailed alongside the [request-info](#request-info) command details. The info state is simply for communicating information between a server and client, allowing both to make decisions on how to proceed.
 
