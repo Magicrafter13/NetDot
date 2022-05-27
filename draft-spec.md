@@ -31,7 +31,7 @@ Command usage table. S = Server, and C = Client, specifying who can *send* the c
 | | | | | |
 | [network-assign](#network-assign) | S: :heavy_check_mark: <br/> C: :x: | :x: | :x: | Assigns a network user ID to a newly joining client. |
 | [network-announce](#network-announce) | :x: | S :heavy_check_mark: <br/> C: :x: | S :heavy_check_mark: <br/> C: :x: | Server announcements. |
-| [network-add](#network-add) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Send (new) user details. |
+| [network-add](#network-add) <br/> [network-remove](#network-remove) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Send (new) user details. Or removes one from the network. |
 | [network-chat](#network-chat) | :x: | :heavy_check_mark: | :heavy_check_mark: | New message on the network. |
 | [network-ping](#network-ping) <br/> [network-pong](#network-pong) | :x: | :heavy_check_mark: | :heavy_check_mark: | Heartbeat. |
 | | | | | |
@@ -54,7 +54,7 @@ After exchanging information, a client may decide to disconnect, or attempt to j
 
 In the lobby, clients must ready up if they wish to play in the next game. When the game starts, any readied client will be set as a player in the game, and anyone not ready will be a spectator. The server will remain in the lobby until it decides to begin a game, unless [voting](#vote) is enabled. Also see [game-ready](#game-ready) and [game-notready](#game-notready).
 
-Players should be allowed to leave a running game and becom spectators. This will be treated similarly to a network disconnect in 2.0, but without requiring the user to actually disconnect. They may simply decide to not continue playing this particular game.
+Players should be allowed to leave a running game and become spectators. This will be treated similarly to a network disconnect in 2.0, but without requiring the user to actually disconnect. They may simply decide to not continue playing this particular game.
 
 The order in which players play will be determined by the server. Traditionally it has gone in the order that people connected to the server, and this will be considered "normal", but most servers will probably want to randomize the player order to avoid repetition.
 
@@ -221,6 +221,9 @@ Used by the server to send out network-wide announcements. May be ignored by cli
 Sends details about a newly connected user to the network (or for all users when someone joins and needs to know who is already here).
 
 `network-add <id: Int> <color: Int> <name: String>`
+
+### network-remove
+Informs users that a user has left the network and to remove them. If the game is running and it was this player's turn, the server MUST send out `game-current` since the current player will have changed.
 
 ### network-chat
 Send a message to the network.
