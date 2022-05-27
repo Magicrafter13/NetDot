@@ -42,6 +42,7 @@ Command usage table. S = Server, and C = Client, specifying who can *send* the c
 | [game-start](#game-start) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Start a new game. |
 | [game-stop](#game-stop) | :x: | :x: | S: :heavy_check_mark: <br/> C: :x: | Stop the game. |
 | [game-leave](#game-leave) <br/> [game-join](#game-join) | :x: | :x: | :heavy_check_mark: | A client wants to (or is) leaving/joining the game. |
+| [game-size](#game-size) | :x: | S: :heavy_check_mark: <br/> C: :x: | S: :heavy_check_mark: <br/> C: :x: | Changes the size of the game grid. |
 | [game-line](#game-line) <br/> [game-box](#game-box) | :x: | :x: | :heavy_check_mark: | Set a line/box's owner in the game. |
 | [game-current](#game-current) | :x: | :x: | S: :heavy_check_mark: <br/> C: :x: | Current player in game. |
 
@@ -51,6 +52,8 @@ After exchanging information, a client may decide to disconnect, or attempt to j
 1. Deny the request (this can also be done before `request-join`, after receiving info about the client), and close the connection for any reason.
 2. If the server is full (or just doesn't want someone to join the game but is willing to let them spectate), it must assign the user to spectator mode.
 3. Or, the server may assign the user a unique player ID, allowing them into the game - the game is not required to be stopped (though how one handles that scenario would be up to them).
+
+When a user is added to the network, the server must first [assign them an id](#network-assign), then the server needs to give update them on the current state of the network, first by sending all [user data](#network-add) (including for the new user), [the grid size](#game-size), then if the game is started, sending [game-start](#game-start), and all the [lines](#game-line) and [boxes](#game-box).
 
 In the lobby, clients must ready up if they wish to play in the next game. When the game starts, any readied client will be set as a player in the game, and anyone not ready will be a spectator. The server will remain in the lobby until it decides to begin a game, unless [voting](#vote) is enabled. Also see [game-ready](#game-ready) and [game-notready](#game-notready).
 
@@ -296,6 +299,11 @@ Client wishes to join the game (leave spectator). The server may choose to ignor
 
 `game-join` (client)  
 `game-join <id: Int>` (server)
+
+### game-size
+Sets the current size of this server's grid. While it may be jarring, the server is allowed to send this when a game is running. It is advised that clients remove old dots/lines/boxes (if either dimension shrunk), and add new dots/lines/boxes (if either dimension grew).
+
+`game-size <width: Int> <height: Int>`
 
 ### game-line
 Set the owner of the given line. This replaces `game-play` for clients. The server (obviously) may ignore this command.
